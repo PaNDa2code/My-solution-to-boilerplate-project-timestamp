@@ -13,6 +13,11 @@ app.use(cors({ optionsSuccessStatus: 200 }));  // some legacy browsers choke on 
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
 
+app.use("/api", (req, res, next) => {
+  console.log(req.method, req.hostname);
+  next();
+})
+
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (req, res) {
   res.sendFile(__dirname + '/views/index.html');
@@ -24,35 +29,39 @@ app.get("/api/hello", function (req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-app.get("/api/:date", (req, res) => {
-  let dateRegex = /[[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}/
-  let unixRegex = /[0-9]{13}/
+app.get("/api/:date?", (req, res) => {
+  const unixRegex = /^[0-9]{13}$/
+  const dateParam = req.params.date;
   let date;
-  if (req.params.date.match(dateRegex)) {
-    date = new Date(req.params.date)
+
+  if (!dateParam) {
+    // create DateConstructor with the currant time
+    date = new Date();
   }
-  else if (req.params.date.match(unixRegex)) {
-    date = new Date(Number(req.params.date))
+  else if (dateParam.match(unixRegex)) {
+    // create DateConstructor with the api unix date request input
+    date = new Date(Number(dateParam))
   }
   else {
-    res.json({ error: "Invalid Date" });
-    return;
+    // create DateConstructor with the api date string request input
+    date = new Date(dateParam);
+    // check it the date is not valid
+    if (!date.getTime()) {
+      // handle invalid date
+      res.json({ error: "Invalid date" });
+      return;
+    }
   }
+
   const unix = date.getTime();
   const utc = date.toUTCString();
   res.json({
     unix: unix,
     utc: utc
   })
+  return;
 });
 
-app.get("/api", (req, res) => {
-  let date = new Date();
-  res.json({
-    unix: date.getTime(),
-    utc: date.toUTCString()
-  });
-})
 
 
 
